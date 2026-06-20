@@ -122,7 +122,7 @@ These are locked. No deviation without an explicit change request and written re
 
 | Date | What happened |
 |------|---------------|
-| 2026-06-21 | Initial scaffold session. Created CONTEXT.md, monorepo structure, .gitignore, .env.example. Repo pushed to `origin/main`. |
+| 2026-06-21 | Initial scaffold session. Created `CONTEXT.md`, full monorepo structure per Section 1 of plan (apps/ml-worker, apps/api, apps/web, apps/vscode-ext, github-action, infra, scripts, .github/workflows), `.gitignore` (Java+Python+Node+env), `.env.example` with all Section 10 vars. All 8 commits pushed to `origin/main`. No real code written yet — structure only. Issue #1 (download dataset) is next. |
 
 ---
 
