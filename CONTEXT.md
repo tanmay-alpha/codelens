@@ -1,0 +1,134 @@
+# CodeLens — Project Context
+
+> Living project context. Read this before doing anything.
+> Source of truth: [ENGINEERING_PLAN.md.md](./ENGINEERING_PLAN.md.md)
+> This file is the project memory — the plan is the spec.
+
+---
+
+## 1. Current Issue
+
+We are at **pre-implementation / repo scaffold phase**.
+
+- The engineering plan ([ENGINEERING_PLAN.md.md](./ENGINEERING_PLAN.md.md)) is committed and is final law.
+- The monorepo is empty except for the plan document.
+- No real code has been written yet.
+- The 30-day implementation order (Section 15 of the plan) begins with Issue #1 (download dataset) and ends with deployment + demo video on Day 30.
+- The first working demo target is **Day 9**: `curl -X POST http://localhost:8000/ml/review` returns real anti-pattern findings.
+- The second working demo target is **Day 15**: open a real PR on a test GitHub repo → CodeLens comment appears within 5 seconds.
+
+The immediate task (this session) is to scaffold the monorepo structure, env example, and gitignore — no real code, no implementations, no business logic.
+
+---
+
+## 2. Tech Stack (Final Decisions)
+
+| Layer | Technology | Version | Reason |
+|-------|-----------|---------|--------|
+| API Language | Java | 21 (LTS) | Virtual threads, modern records, Spring Boot 3.x |
+| API Framework | Spring Boot | 3.3.x | Industry standard, JPA, Security, OAuth2 all built-in |
+| Build Tool | Maven | 3.9 | Simpler for single Spring Boot module |
+| ML Language | Python | 3.11 | HuggingFace ecosystem, PyTorch |
+| ML Framework | FastAPI | 0.115 | Async, Pydantic v2, auto docs |
+| ML Model | microsoft/codebert-base | latest | Code-specific pre-training, 125M params, feasible on CPU |
+| Frontend | Next.js | 15 (App Router) | You already know this |
+| Frontend UI | Tailwind CSS + shadcn/ui | latest | Fast, consistent |
+| Charts | Recharts | 2.x | Works with React, simple API |
+| Extension | TypeScript | 5.x | VS Code extension API requires it |
+| Database | PostgreSQL | 16 | Relational, mature, free |
+| ORM | Spring Data JPA + Hibernate | via Spring Boot | Reduces boilerplate |
+| Cache | Redis | 7.x | Webhook dedup only (tiny usage) |
+| Auth | GitHub OAuth 2.0 + JWT | — | Users sign in with GitHub, JWT for stateless API |
+| Containerization | Docker + Docker Compose | — | Local dev + deployment |
+| API Client (Java) | Spring WebClient | via Spring Boot | Non-blocking HTTP calls to FastAPI |
+
+### What we are NOT using
+- Kafka / RabbitMQ (overkill for MVP — use `@Async`)
+- GraphQL (REST is sufficient)
+- Kubernetes (Railway handles orchestration)
+- Elasticsearch (no full-text search needed)
+- Redis for session storage (JWT is stateless)
+
+---
+
+## 3. Service Map (from Section 2 of plan)
+
+| Service | Path | Port | Owns |
+|---------|------|------|------|
+| API | `apps/api` | 8080 | Business logic, GitHub integration, OAuth, webhooks, DB, orchestration |
+| ML Worker | `apps/ml-worker` | 8000 | Diff → anti-pattern findings (CodeBERT inference only) |
+| Web | `apps/web` | 3000 | UI — dashboard, PR review, taxonomy, settings |
+| VS Code Ext | `apps/vscode-ext` | — | In-editor squiggles + hover via `/api/scan/file` |
+| GitHub Action | `github-action/` | — | CI integration via `/api/scan/action` |
+
+---
+
+## 4. Issue Tracker Checklist (#1–#20)
+
+Pulled from Section 14 of the plan. Do not change the order.
+
+### Milestone 1: ML Foundation (Week 1–2)
+- [ ] **#1** Download and inspect CodeReviewer dataset
+- [ ] **#2** Implement label mapper with taxonomy
+- [ ] **#3** Manual verification of 500 samples
+- [ ] **#4** Train/val/test split by PR ID
+- [ ] **#5** Implement CodeBERT fine-tuning pipeline
+- [ ] **#6** Evaluate model against two baselines
+
+### Milestone 2: ML Worker Service (Week 3)
+- [ ] **#7** Implement unified diff parser
+- [ ] **#8** Implement sliding window tokenizer
+- [ ] **#9** Build FastAPI ML worker with `/ml/review` endpoint
+
+### Milestone 3: Spring Boot API (Week 3–4)
+- [ ] **#10** Spring Boot project scaffold + DB entities
+- [ ] **#11** GitHub OAuth 2.0 login + JWT issuance
+- [ ] **#12** Webhook receiver with HMAC verification
+- [ ] **#13** Full review flow — webhook to GitHub comment
+- [ ] **#14** Repo management endpoints + webhook installation
+- [ ] **#15** VS Code API key generation and validation
+
+### Milestone 4: Frontend + Extensions (Week 5–7)
+- [ ] **#16** Next.js auth + dashboard shell
+- [ ] **#17** PR review page with diff viewer + annotations
+- [ ] **#18** Quality trend chart + repo detail page
+- [ ] **#19** VS Code extension — file scan on save
+- [ ] **#20** GitHub Actions integration
+
+---
+
+## 5. Non-Negotiable Decisions
+
+These are locked. No deviation without an explicit change request and written reason.
+
+1. **Monorepo layout** is exactly what Section 1 of the plan specifies. No reorganizing.
+2. **No Kafka / RabbitMQ / GraphQL / Kubernetes / Elasticsearch** for MVP. Use `@Async`, REST, Railway, none.
+3. **JWT in httpOnly cookies**, never localStorage (XSS prevention).
+4. **API keys**: `cl_live_` prefix + 32 hex chars, bcrypt-hashed in DB, prefix stored plaintext for display.
+5. **Webhook security**: HMAC-SHA256, timing-safe comparison via `MessageDigest.isEqual`.
+6. **DB encryption**: GitHub OAuth tokens + webhook secrets encrypted with AES-256-GCM via Spring `@Convert`. Single `ENCRYPTION_KEY` env var.
+7. **ML worker is internal-only**. Never exposed to internet. Validated by `ML_WORKER_SECRET` header.
+8. **Threshold = 0.5** sigmoid per label. Do not change without documenting.
+9. **Test split is untouched** until final eval (`test.json` is sacred).
+10. **Train/val/test split by PR ID**, not random rows (prevents leakage).
+11. **Loss function is BCEWithLogitsLoss** for multi-label classification.
+12. **Branch strategy**: `main` is protected, no direct commits, every change is a PR.
+13. **One commit per logical step** during scaffolding. No batching.
+14. **Structure only** until this scaffold session is complete. No real code yet.
+
+---
+
+## 6. Session Log
+
+| Date | What happened |
+|------|---------------|
+| 2026-06-21 | Initial scaffold session. Created CONTEXT.md, monorepo structure, .gitignore, .env.example. Repo pushed to `origin/main`. |
+
+---
+
+## 7. How to Use This File
+
+- New session? Read this file first, then re-read [ENGINEERING_PLAN.md.md](./ENGINEERING_PLAN.md.md) Section relevant to your current issue.
+- Starting an issue? Update the checkbox in Section 4.
+- Making a non-trivial decision? Add it to Section 5 only after asking the principal engineer.
+- Finished a session? Add a row to Section 6 with the date and a one-line summary.
